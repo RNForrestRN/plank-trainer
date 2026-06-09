@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<title>Plank Trainer</title>
+<style>
+  :root {
+    --green:       #1D9E75;
+    --green-dark:  #0F6E56;
+    --green-light: #E1F5EE;
+    --blue:        #378ADD;
+    --blue-light:  #E6F1FB;
+    --bg:          #ffffff;
+    --bg-2:        #f5f5f3;
+    --bg-3:        #ebebea;
+    --text:        #1a1a18;
+    --text-2:      #6b6b67;
+    --text-3:      #9b9b97;
+    --border:      rgba(0,0,0,0.10);
+    --border-2:    rgba(0,0,0,0.18);
+    --radius-sm:   8px;
+    --radius-md:   12px;
+    --radius-lg:   16px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --green:       #2ebd8f;
+      --green-dark:  #5ed4aa;
+      --green-light: #0a3d2b;
+      --blue:        #5ba3e8;
+      --blue-light:  #0d2e4a;
+      --bg:          #141413;
+      --bg-2:        #1e1e1c;
+      --bg-3:        #282826;
+      --text:        #f0f0ee;
+      --text-2:      #9b9b97;
+      --text-3:      #6b6b67;
+      --border:      rgba(255,255,255,0.10);
+      --border-2:    rgba(255,255,255,0.18);
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: calc(72px + var(--safe-bottom));
+  }
+
+  .header {
+    padding: 1.25rem 1.25rem 0.75rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .header h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .header p  { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    padding-bottom: var(--safe-bottom);
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-3);
+    font-size: 10px;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+  .nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-btn.active { color: var(--green); }
+
+  /* Tabs */
+  .tab { display: none; flex: 1; padding: 1.25rem; }
+  .tab.active { display: block; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 10px;
+  }
+
+  /* Level selector */
+  .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  .level-card {
+    padding: 12px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    background: var(--bg);
+    -webkit-user-select: none; user-select: none;
+  }
+  .level-card.active { border-color: var(--green); background: var(--green-light); }
+  .level-card .l-icon { font-size: 20px; margin-bottom: 4px; }
+  .level-card .l-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .level-card .l-meta { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+  .level-card.active .l-name { color: var(--green-dark); }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  .stat-box { background: var(--bg-2); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
+  .stat-box .val { font-size: 18px; font-weight: 600; color: var(--text); }
+  .stat-box .lbl { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+
+  /* Timer */
+  .timer-wrap { display: flex; flex-direction: column; align-items: center; margin: 0.5rem 0 1.25rem; }
+  .timer-circle { position: relative; width: 200px; height: 200px; }
+  .timer-circle svg { transform: rotate(-90deg); width: 200px; height: 200px; }
+  .timer-track { fill: none; stroke: var(--bg-3); stroke-width: 12; }
+  .timer-prog  { fill: none; stroke: var(--green); stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.4s linear, stroke 0.3s; }
+  .timer-inner {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .timer-time  { font-size: 42px; font-weight: 600; color: var(--text); letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+  .timer-phase { font-size: 13px; font-weight: 600; color: var(--green); margin-top: 2px; min-height: 18px; }
+  .timer-set   { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 10px; margin-bottom: 0.75rem; }
+  .btn-primary {
+    flex: 2;
+    padding: 15px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.08s;
+    -webkit-user-select: none; user-select: none;
+  }
+  .btn-primary:active { background: var(--green-dark); transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--bg-3); color: var(--text-3); cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    flex: 1;
+    padding: 15px;
+    background: var(--bg-2);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    -webkit-user-select: none; user-select: none;
+  }
+  .btn-secondary:active { background: var(--bg-3); }
+
+  .exercise-name-label { text-align: center; font-size: 13px; color: var(--text-2); margin-bottom: 0.25rem; }
+
+  /* Library */
+  .ex-list { display: flex; flex-direction: column; gap: 8px; }
+  .ex-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .ex-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px;
+    cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+  .ex-emoji { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; }
+  .ex-title-wrap { flex: 1; }
+  .ex-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .ex-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+  .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 7px;
+    border-radius: 99px;
+  }
+  .badge-level   { background: var(--green-light); color: var(--green-dark); }
+  .badge-muscle  { background: var(--bg-2); color: var(--text-2); }
+  .ex-chevron { font-size: 18px; color: var(--text-3); transition: transform 0.2s; flex-shrink: 0; }
+  .ex-card.open .ex-chevron { transform: rotate(180deg); }
+  .ex-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.25s ease;
+    border-top: 0px solid var(--border);
+  }
+  .ex-card.open .ex-body { max-height: 300px; border-top-width: 0.5px; }
+  .ex-body-inner { padding: 12px 14px 14px; font-size: 13px; color: var(--text-2); line-height: 1.65; }
+  .ex-body-inner strong { color: var(--text); font-weight: 600; }
+
+  /* Progress */
+  .progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  .bar-wrap { margin-bottom: 1.25rem; }
+  .bars { display: flex; align-items: flex-end; gap: 5px; height: 80px; margin-top: 8px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .bar-fill { width: 100%; background: var(--green); border-radius: 4px 4px 0 0; min-height: 4px; }
+  .bar-val  { font-size: 9px; color: var(--text-3); }
+  .bar-idx  { font-size: 10px; color: var(--text-3); }
+  .log-list { display: flex; flex-direction: column; gap: 6px; }
+  .log-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+  }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .log-info { flex: 1; min-width: 0; }
+  .log-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log-meta { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+  .log-hold { font-size: 14px; font-weight: 600; color: var(--green); flex-shrink: 0; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-2); font-size: 14px; }
+  .empty-state .empty-icon { font-size: 40px; display: block; margin-bottom: 0.75rem; }
+  .prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .btn-text { background: none; border: none; color: var(--text-3); font-size: 13px; cursor: pointer; padding: 4px 0; }
+  .btn-text:active { color: var(--text); }
+
+  /* Tips */
+  .tips-list { display: flex; flex-direction: column; gap: 8px; }
+  .tip-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; background: var(--bg); }
+  .tip-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .tip-icon { font-size: 20px; width: 28px; text-align: center; }
+  .tip-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .tip-body { font-size: 13px; color: var(--text-2); line-height: 1.65; }
+
+  /* aria-live region */
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>Plank Trainer</h1>
+    <p>Build your core, one hold at a time.</p>
+  </div>
+
+  <!-- WORKOUT TAB -->
+  <div id="tab-workout" class="tab active" role="main">
+    <div class="section-label">Choose your level</div>
+    <div class="level-grid">
+      <button class="level-card active" data-level="0" aria-pressed="true">
+        <div class="l-icon">🌱</div>
+        <div class="l-name">Beginner</div>
+        <div class="l-meta">3 × 20 s</div>
+      </button>
+      <button class="level-card" data-level="1" aria-pressed="false">
+        <div class="l-icon">🔥</div>
+        <div class="l-name">Intermediate</div>
+        <div class="l-meta">3 × 45 s</div>
+      </button>
+      <button class="level-card" data-level="2" aria-pressed="false">
+        <div class="l-icon">⚡</div>
+        <div class="l-name">Advanced</div>
+        <div class="l-meta">4 × 75 s</div>
+      </button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box"><div class="val" id="s-sets">3</div><div class="lbl">Sets</div></div>
+      <div class="stat-box"><div class="val" id="s-hold">20s</div><div class="lbl">Hold</div></div>
+      <div class="stat-box"><div class="val" id="s-rest">25s</div><div class="lbl">Rest</div></div>
+    </div>
+
+    <div class="exercise-name-label" id="ex-label">Standard Plank — Beginner</div>
+
+    <div class="timer-wrap">
+      <div class="timer-circle" role="timer" aria-label="Plank timer">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="timer-track" cx="100" cy="100" r="88"/>
+          <circle class="timer-prog" id="timer-ring" cx="100" cy="100" r="88"
+            stroke-dasharray="552.92" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-inner">
+          <div class="timer-time" id="timer-display">00:20</div>
+          <div class="timer-phase" id="timer-phase">Ready</div>
+          <div class="timer-set"  id="timer-set">Set 1 of 3</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accessible live region for screen readers -->
+    <div aria-live="polite" aria-atomic="true" class="sr-only" id="timer-announce"></div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-reset" onclick="resetTimer()" aria-label="Reset timer">↺ Reset</button>
+      <button class="btn-primary"   id="btn-start" onclick="toggleTimer()" aria-label="Start timer">▶ Start</button>
+    </div>
+  </div>
+
+  <!-- LIBRARY TAB -->
+  <div id="tab-library" class="tab" aria-label="Exercise library">
+    <div class="section-label">Plank variations</div>
+    <div class="ex-list" id="ex-list"></div>
+  </div>
+
+  <!-- PROGRESS TAB -->
+  <div id="tab-progress" class="tab" aria-label="Progress tracking">
+    <div class="prog-header">
+      <div class="section-label" style="margin-bottom:0;">Your sessions</div>
+      <button class="btn-text" id="btn-clear" onclick="confirmClear()">Clear all</button>
+    </div>
+    <div class="progress-stats">
+      <div class="stat-box"><div class="val" id="p-sessions">0</div><div class="lbl">Sessions</div></div>
+      <div class="stat-box"><div class="val" id="p-time">0s</div><div class="lbl">Total hold</div></div>
+      <div class="stat-box"><div class="val" id="p-best">—</div><div class="lbl">Best hold</div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="section-label">Last 7 sessions</div>
+      <div class="bars" id="bar-chart" aria-label="Bar chart of recent session hold times"></div>
+    </div>
+    <div class="section-label">Recent sessions</div>
+    <div class="log-list" id="log-list"></div>
+  </div>
+
+  <!-- TIPS TAB -->
+  <div id="tab-tips" class="tab" aria-label="Form tips">
+    <div class="section-label">Form &amp; technique</div>
+    <div class="tips-list" id="tips-list"></div>
+  </div>
+</div>
+
+<!-- Bottom navigation -->
+<nav class="bottom-nav" aria-label="Main navigation">
+  <button class="nav-btn active" data-tab="workout" onclick="switchTab('workout', this)" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+    Workout
+  </button>
+  <button class="nav-btn" data-tab="library" onclick="switchTab('library', this)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+    Library
+  </button>
+  <button class="nav-btn" data-tab="progress" onclick="switchTab('progress', this)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Progress
+  </button>
+  <button class="nav-btn" data-tab="tips" onclick="switchTab('tips', this)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Tips
+  </button>
+</nav>
+
+<script>
+'use strict';
+
+/* ── Data ─────────────────────────────────────────────── */
+const LEVELS = [
+  { name: 'Beginner',     exercise: 'Standard Plank', sets: 3, hold: 20, rest: 25 },
+  { name: 'Intermediate', exercise: 'Standard Plank', sets: 3, hold: 45, rest: 20 },
+  { name: 'Advanced',     exercise: 'RKC Plank',      sets: 4, hold: 75, rest: 15 },
+];
+
+const EXERCISES = [
+  {
+    emoji: '🏋️', name: 'Standard Plank',
+    level: 'All levels', muscles: ['Core', 'Shoulders', 'Glutes'],
+    desc: 'The foundation of core training. Forearms flat, body in a single rigid line from head to heels.',
+    detail: '<strong>Setup:</strong> Elbows directly under shoulders, forearms flat, toes on floor. <strong>Key cues:</strong> Squeeze your glutes, brace your core as if about to be punched, keep your neck neutral. Breathe steadily — don\'t hold your breath.',
+  },
+  {
+    emoji: '🤲', name: 'High Plank',
+    level: 'Beginner+', muscles: ['Core', 'Arms', 'Chest'],
+    desc: 'Arms fully extended, wrists stacked under shoulders. Increases demand on chest and triceps.',
+    detail: '<strong>Setup:</strong> Palms flat, arms straight, wrists under shoulders. <strong>Key cues:</strong> Don\'t let hips sag or pike — maintain a single rigid line. Great foundation for push-up progressions.',
+  },
+  {
+    emoji: '↔️', name: 'Side Plank',
+    level: 'Intermediate', muscles: ['Obliques', 'Hip', 'Core'],
+    desc: 'On one forearm and the side of one foot. Targets lateral core stability and the obliques.',
+    detail: '<strong>Setup:</strong> Elbow under shoulder, feet stacked or staggered for balance. Lift hips to form a straight diagonal line. <strong>Key cues:</strong> Drive hips toward the ceiling. Hold both sides equally.',
+  },
+  {
+    emoji: '👆', name: 'Shoulder Tap Plank',
+    level: 'Intermediate', muscles: ['Core', 'Anti-rotation', 'Stability'],
+    desc: 'From a high plank, alternately tap each shoulder. Challenges rotational control of the core.',
+    detail: '<strong>Setup:</strong> High plank, feet slightly wider for stability. <strong>Key cues:</strong> Tap one hand to the opposite shoulder while resisting rotation through your hips and torso. Slow and controlled always beats fast and sloppy.',
+  },
+  {
+    emoji: '💪', name: 'RKC Plank',
+    level: 'Advanced', muscles: ['Core', 'Full body'],
+    desc: 'Maximum-tension plank. Squeeze every muscle simultaneously. Even 10–20 seconds is brutal.',
+    detail: '<strong>Setup:</strong> Standard forearm plank. <strong>Key cues:</strong> Try to drag your elbows toward your toes (they won\'t move). Squeeze glutes maximally. Posterior pelvic tilt. Every muscle fires — that\'s the point.',
+  },
+  {
+    emoji: '🔄', name: 'Hip Dip Plank',
+    level: 'Intermediate', muscles: ['Obliques', 'Core'],
+    desc: 'From a forearm plank, rotate hips side to side toward the floor for dynamic oblique work.',
+    detail: '<strong>Setup:</strong> Standard forearm plank. <strong>Key cues:</strong> Rotate hips toward the floor on each side — don\'t go so far you lose core tension. Keep shoulders level and stable throughout.',
+  },
+];
+
+const TIPS = [
+  { emoji: '👀', title: 'Eye gaze', body: 'Look at a spot on the floor about 12 inches in front of your hands. This keeps your neck neutral and prevents unnecessary cervical strain.' },
+  { emoji: '🫁', title: 'Breathe — don\'t hold', body: 'Many beginners hold their breath. Inhale through your nose, exhale through your mouth. Steady breathing tells your nervous system everything is under control.' },
+  { emoji: '📏', title: 'The straight-line rule', body: 'Imagine a broomstick resting on your head, back, and heels. Hips are the most common failure point — they sag down or pike up. Both reduce effectiveness significantly.' },
+  { emoji: '🤜', title: 'Tense everything', body: 'The more muscle groups you actively engage, the more effective the hold. Squeeze your glutes, push your heels back, and brace your core — not just your abs, your whole trunk.' },
+  { emoji: '⏱️', title: 'Quality over quantity', body: 'A rock-solid 20-second plank is worth more than a 3-minute collapse. When form breaks, stop. Rest. Go again. Progress is built on clean reps.' },
+  { emoji: '🏆', title: 'Progress intelligently', body: 'Once you can hold a clean plank for 90 seconds, make it harder — not longer. Move to side planks, shoulder taps, or the RKC technique rather than just extending duration.' },
+];
+
+/* ── Storage ──────────────────────────────────────────── */
+function loadLog() {
+  try {
+    const raw = localStorage.getItem('plank_log_v2');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveLog(log) {
+  try {
+    localStorage.setItem('plank_log_v2', JSON.stringify(log));
+  } catch (_) { /* storage full or unavailable — fail silently */ }
+}
+
+/* ── State ────────────────────────────────────────────── */
+let sessionLog    = loadLog();
+let currentLevel  = 0;
+let timerInterval = null;   // always null when stopped
+let isRunning     = false;
+let isResting     = false;
+let currentSet    = 1;
+let timeLeft      = LEVELS[0].hold;
+let startEpoch    = null;   // wall-clock reference for drift correction
+let expectedEnd   = null;
+
+/* ── Utilities ────────────────────────────────────────── */
+function fmt(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function totalHoldTime(log) {
+  return log.reduce((acc, entry) => acc + entry.hold, 0);
+}
+
+function formatDuration(secs) {
+  if (secs >= 3600) return Math.round(secs / 3600) + 'h';
+  if (secs >= 60)   return Math.round(secs / 60) + 'm';
+  return secs + 's';
+}
+
+/* ── Tab switching ────────────────────────────────────── */
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.remove('active');
+    b.removeAttribute('aria-current');
+  });
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  btn.setAttribute('aria-current', 'page');
+  if (name === 'progress') renderProgress();
+}
+
+/* ── Level selection ──────────────────────────────────── */
+function initLevelButtons() {
+  document.querySelectorAll('.level-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.level, 10);
+      selectLevel(idx);
+    });
+  });
+}
+
+function selectLevel(idx) {
+  // Update state before reset so resetTimer reads the correct level
+  currentLevel = idx;
+  document.querySelectorAll('.level-card').forEach((c, i) => {
+    c.classList.toggle('active', i === idx);
+    c.setAttribute('aria-pressed', i === idx ? 'true' : 'false');
+  });
+  resetTimer();
+  const lv = LEVELS[idx];
+  document.getElementById('s-sets').textContent = lv.sets;
+  document.getElementById('s-hold').textContent = lv.hold + 's';
+  document.getElementById('s-rest').textContent = lv.rest + 's';
+}
+
+/* ── Timer ────────────────────────────────────────────── */
+const CIRC = 2 * Math.PI * 88; // 552.92
+
+function updateRing(current, total) {
+  const offset = CIRC * (1 - current / total);
+  const ring = document.getElementById('timer-ring');
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = isResting ? 'var(--blue)' : 'var(--green)';
+}
+
+function updateDisplay() {
+  const lv = LEVELS[currentLevel];
+  document.getElementById('timer-display').textContent = fmt(timeLeft);
+  document.getElementById('timer-set').textContent = 'Set ' + currentSet + ' of ' + lv.sets;
+  const total = isResting ? lv.rest : lv.hold;
+  updateRing(timeLeft, total);
+}
+
+function announce(msg) {
+  const el = document.getElementById('timer-announce');
+  el.textContent = '';
+  // Force re-announcement via DOM replacement
+  requestAnimationFrame(() => { el.textContent = msg; });
+}
+
+function resetTimer() {
+  stopTick();
+  isRunning  = false;
+  isResting  = false;
+  currentSet = 1;
+  timeLeft   = LEVELS[currentLevel].hold;
+
+  document.getElementById('timer-phase').textContent = 'Ready';
+  document.getElementById('btn-start').textContent   = '▶ Start';
+  document.getElementById('btn-start').disabled      = false;
+  updateDisplay();
+  announce('Timer reset. Press Start when ready.');
+}
+
+function stopTick() {
+  if (timerInterval !== null) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+// Drift-corrected tick: calculates true elapsed time from wall clock
+function startTick() {
+  const lv = LEVELS[currentLevel];
+  startEpoch  = Date.now();
+  expectedEnd = startEpoch + timeLeft * 1000;
+
+  stopTick();
+  timerInterval = setInterval(() => {
+    const remaining = Math.round((expectedEnd - Date.now()) / 1000);
+
+    if (remaining <= 0) {
+      timeLeft = 0;
+      updateDisplay();
+      stopTick();
+      onSegmentEnd();
+      return;
+    }
+
+    timeLeft = remaining;
+    updateDisplay();
+  }, 250); // Poll at 250ms — fast enough for smooth display, resilient to throttling
+}
+
+function onSegmentEnd() {
+  const lv = LEVELS[currentLevel];
+
+  if (!isResting) {
+    // Completed a hold — log it
+    sessionLog.push({
+      exercise: lv.exercise,
+      level:    lv.name,
+      hold:     lv.hold,
+      date:     new Date().toLocaleDateString(),
+      ts:       Date.now(),
+    });
+    saveLog(sessionLog);
+
+    if (currentSet >= lv.sets) {
+      // Session complete
+      isRunning = false;
+      document.getElementById('timer-phase').textContent = 'Done! 🎉';
+      document.getElementById('timer-display').textContent = '✓';
+      document.getElementById('timer-set').textContent = 'Session complete!';
+      document.getElementById('btn-start').textContent = '↺ New session';
+      document.getElementById('btn-start').onclick = () => { resetTimer(); };
+      announce('Session complete! Great work.');
+      return;
+    }
+
+    // Start rest
+    isResting   = true;
+    timeLeft    = lv.rest;
+    document.getElementById('timer-phase').textContent = 'Rest';
+    announce('Rest — ' + lv.rest + ' seconds.');
+
+  } else {
+    // Rest over — next set
+    isResting  = false;
+    currentSet += 1;
+    timeLeft   = lv.hold;
+    document.getElementById('timer-phase').textContent = 'Hold!';
+    announce('Set ' + currentSet + ' of ' + lv.sets + '. Go!');
+  }
+
+  updateDisplay();
+  startTick(); // continue automatically
+}
+
+function toggleTimer() {
+  const btn = document.getElementById('btn-start');
+
+  if (btn.textContent.includes('New session')) {
+    resetTimer();
+    return;
+  }
+
+  if (isRunning) {
+    // Pause
+    stopTick();
+    isRunning = false;
+    btn.textContent = '▶ Resume';
+    announce('Timer paused.');
+  } else {
+    // Start or resume
+    isRunning = true;
+    if (!isResting) {
+      document.getElementById('timer-phase').textContent = timeLeft === LEVELS[currentLevel].hold ? 'Hold!' : 'Hold!';
+    }
+    btn.textContent = '⏸ Pause';
+    announce(isResting ? 'Resuming rest.' : 'Hold! Go!');
+    startTick();
+  }
+}
+
+/* ── Library ──────────────────────────────────────────── */
+function renderLibrary() {
+  const list = document.getElementById('ex-list');
+  list.innerHTML = EXERCISES.map((ex, i) => {
+    const badges = [
+      '<span class="badge badge-level">' + ex.level + '</span>',
+      ...ex.muscles.map(m => '<span class="badge badge-muscle">' + m + '</span>'),
+    ].join('');
+    return (
+      '<div class="ex-card" id="ex-' + i + '">' +
+        '<div class="ex-header" onclick="toggleEx(' + i + ')" role="button" tabindex="0" ' +
+          'aria-expanded="false" aria-controls="exbody-' + i + '" id="exhdr-' + i + '">' +
+          '<span class="ex-emoji" aria-hidden="true">' + ex.emoji + '</span>' +
+          '<div class="ex-title-wrap">' +
+            '<div class="ex-title">' + ex.name + '</div>' +
+            '<div class="ex-badges">' + badges + '</div>' +
+          '</div>' +
+          '<span class="ex-chevron" aria-hidden="true">⌄</span>' +
+        '</div>' +
+        '<div class="ex-body" id="exbody-' + i + '" role="region" aria-labelledby="exhdr-' + i + '">' +
+          '<div class="ex-body-inner">' +
+            '<p>' + ex.desc + '</p>' +
+            '<p style="margin-top:8px">' + ex.detail + '</p>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+
+  // Keyboard support for exercise cards
+  list.querySelectorAll('.ex-header').forEach(hdr => {
+    hdr.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hdr.click(); }
+    });
+  });
+}
+
+function toggleEx(i) {
+  const card = document.getElementById('ex-' + i);
+  const hdr  = document.getElementById('exhdr-' + i);
+  const isOpen = card.classList.contains('open');
+
+  // Close all
+  document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('open'));
+  document.querySelectorAll('.ex-header').forEach(h => h.setAttribute('aria-expanded', 'false'));
+
+  if (!isOpen) {
+    card.classList.add('open');
+    hdr.setAttribute('aria-expanded', 'true');
+  }
+}
+
+/* ── Progress ─────────────────────────────────────────── */
+function renderProgress() {
+  const log      = sessionLog;
+  const total    = log.length;
+  const holdSecs = totalHoldTime(log);
+  const best     = log.length ? Math.max(...log.map(e => e.hold)) : 0;
+
+  document.getElementById('p-sessions').textContent = total;
+  document.getElementById('p-time').textContent     = formatDuration(holdSecs);
+  document.getElementById('p-best').textContent     = best ? best + 's' : '—';
+
+  // Bar chart — last 7 sessions
+  const recent = log.slice(-7);
+  const maxH   = recent.length ? Math.max(...recent.map(e => e.hold)) : 1;
+  const barEl  = document.getElementById('bar-chart');
+  if (recent.length === 0) {
+    barEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:1rem 0 0;">No data yet</div>';
+  } else {
+    barEl.innerHTML = recent.map((e, i) => {
+      const pct = Math.round((e.hold / maxH) * 70);
+      return (
+        '<div class="bar-col">' +
+          '<div class="bar-val">' + e.hold + 's</div>' +
+          '<div class="bar-fill" style="height:' + Math.max(pct, 4) + 'px"></div>' +
+          '<div class="bar-idx">' + (i + 1) + '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  // Log list — most recent first, cap at 15
+  const listEl = document.getElementById('log-list');
+  if (!log.length) {
+    listEl.innerHTML = (
+      '<div class="empty-state">' +
+        '<span class="empty-icon">🏋️</span>' +
+        'No sessions yet.<br>Complete a workout to see your progress!' +
+      '</div>'
+    );
+    return;
+  }
+  listEl.innerHTML = [...log].reverse().slice(0, 15).map(e =>
+    '<div class="log-item">' +
+      '<div class="log-dot"></div>' +
+      '<div class="log-info">' +
+        '<div class="log-name">' + e.exercise + '</div>' +
+        '<div class="log-meta">' + e.level + ' · ' + e.date + '</div>' +
+      '</div>' +
+      '<div class="log-hold">' + e.hold + 's</div>' +
+    '</div>'
+  ).join('');
+}
+
+function confirmClear() {
+  if (sessionLog.length === 0) return;
+  if (window.confirm('Clear all session history? This cannot be undone.')) {
+    sessionLog = [];
+    saveLog(sessionLog);
+    renderProgress();
+  }
+}
+
+/* ── Tips ─────────────────────────────────────────────── */
+function renderTips() {
+  document.getElementById('tips-list').innerHTML = TIPS.map(t =>
+    '<div class="tip-card">' +
+      '<div class="tip-head">' +
+        '<span class="tip-icon" aria-hidden="true">' + t.emoji + '</span>' +
+        '<span class="tip-title">' + t.title + '</span>' +
+      '</div>' +
+      '<div class="tip-body">' + t.body + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+/* ── Init ─────────────────────────────────────────────── */
+initLevelButtons();
+renderLibrary();
+renderTips();
+renderProgress();
+resetTimer();
+</script>
+</body>
+</html>
